@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EquityLens – Indian Stock Market Valuation & Financial Tracker</title>
+  
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .scanner-presets-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+      align-items: center;
+    }
+    .scanner-preset-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.74rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .scanner-preset-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-medium);
+    }
+    .scanner-preset-btn.active {
+      background: var(--accent-emerald-light);
+      color: var(--accent-emerald);
+      border-color: rgba(16, 185, 129, 0.35);
+      font-weight: 600;
+    }
+
+    .timing-meter-container {
+      background: var(--bg-surface);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .timing-meter-bar {
+      height: 6px;
+      background: var(--bg-surface-elevated);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .timing-meter-fill {
+      height: 100%;
+      background: var(--accent-emerald);
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease;
+    }
+
+    /* Forensic card styling */
+    .forensic-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-sm);
+    }
+    .forensic-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-wrapper">
+          <div class="brand-icon">₹</div>
+          <div class="brand-text">
+            <h1>EquityLens</h1>
+            <div class="brand-subtitle">NIFTY 50 Terminal</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+            <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+            <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+          </svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-view="explorer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>Stock Explorer</span>
+        </a>
+        <a class="nav-item" data-view="valuation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          <span>Valuation Ensemble</span>
+        </a>
+        <a class="nav-item" data-view="analysis">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Forensic & DuPont</span>
+        </a>
+        <a class="nav-item" data-view="portfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+            <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+          </svg>
+          <span>Portfolio & Risk</span>
+        </a>
+        <a class="nav-item" data-view="watchlist">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span>Watchlist & Radar</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        Data referenced from <a href="https://www.screener.in" target="_blank" rel="noopener">Screener.in</a>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h2 class="page-title" id="activeViewTitle">Dashboard</h2>
+        </div>
+
+        <div class="header-right">
+          <div class="indices-ticker">
+            <div class="index-pill">
+              <span class="index-name">NIFTY 50</span>
+              <span class="index-value" id="headerNiftyVal">24,536.60</span>
+              <span class="index-change positive" id="headerNiftyChg">+3.05%</span>
+            </div>
+            <div class="index-pill">
+              <span class="index-name">SENSEX</span>
+              <span class="index-value" id="headerSensexVal">79,310.01</span>
+              <span class="index-change positive" id="headerSensexChg">+3.11%</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ==================================================================
+           VIEW 1: DASHBOARD
+           ================================================================== -->
+      <section class="view-section active" id="view-dashboard">
+        <div class="section-intro">
+          <h2>Market Overview</h2>
+          <p>Portfolio status, market benchmarks, and key blue-chip highlights.</p>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Portfolio Value</div>
+            <div class="kpi-value" id="dashPortfolioValue">₹ 0</div>
+            <div class="kpi-subtext">Current market worth</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Invested Capital</div>
+            <div class="kpi-value" id="dashInvestedAmount">₹ 0</div>
+            <div class="kpi-subtext">Total cost of holdings</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Net Return</div>
+            <div class="kpi-value" id="dashPortfolioPL">₹ 0 (0.00%)</div>
+            <div class="kpi-subtext">Unrealized profit/loss</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Universe</div>
+            <div class="kpi-value" id="dashTrackedCount">50 Stocks</div>
+            <div class="kpi-subtext">NIFTY 50 constituents</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Market Highlights</div>
+              <div class="card-subtitle">Snapshot of premier Indian enterprises</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="App.switchView('explorer')">View All 50 →</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Sector</th>
+                  <th class="num">Price</th>
+                  <th class="num">P/E</th>
+                  <th class="num">ROE</th>
+                  <th class="num">ROCE</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="dashHighlightsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VIEW 2: STOCK EXPLORER WITH SORTABLE HEADERS
+           ================================================================== -->
+      <section class="view-section" id="view-explorer">
+        <div class="section-intro">
+          <h2>Stock Explorer</h2>
+          <p>Click table headers to sort by Price, P/E, Market Cap, or ROE. Filter by sector or setup presets.</p>
+        </div>
+
+        <div class="card">
+          <div class="scanner-presets-bar">
+            <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; margin-right: 4px;">Quick Filters:</span>
+            <button class="scanner-preset-btn active" data-preset="all">All 50</button>
+            <button class="scanner-preset-btn" data-preset="buffett">Buffett Value (P/E &lt; 30, ROE &ge; 15%)</button>
+            <button class="scanner-preset-btn" data-preset="roce">Capital Compounders (ROCE &ge; 25%)</button>
+            <button class="scanner-preset-btn" data-preset="dip">Near 52W Low</button>
+            <button class="scanner-preset-btn" data-preset="dividend">High Dividend (Yield &ge; 1.5%)</button>
+          </div>
+
+          <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
+            <div style="flex: 2; min-width: 240px;">
+              <input type="text" id="explorerSearch" class="form-control" placeholder="Search company or ticker...">
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+              <select id="explorerSectorFilter" class="form-control"></select>
+            </div>
+            <div>
+              <button class="btn btn-secondary" onclick="ReportExporter.exportScreenerCSV()">
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span id="explorerStockCount" class="badge badge-sector">Showing 50 of 50</span>
+            <span style="font-size: 0.72rem; color: var(--text-tertiary);">Tip: Click column titles to sort</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 32px;"></th>
+                  <th class="sortable-th" data-col="name">Company</th>
+                  <th class="sortable-th" data-col="sector">Sector</th>
+                  <th class="num sortable-th" data-col="currentPrice">Price (₹)</th>
+                  <th class="num sortable-th sorted-desc" data-col="marketCapCr">Mkt Cap</th>
+                  <th class="num sortable-th" data-col="pe">P/E</th>
+                  <th class="num sortable-th" data-col="pb">P/B</th>
+                  <th class="num sortable-th" data-col="dividendYield">Yield</th>
+                  <th class="num sortable-th" data-col="roe">ROE</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="stockExplorerTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VIEW 3: VALUATION CALCULATOR ENSEMBLE (4 MODELS)
+           ================================================================== -->
+      <section class="view-section" id="view-valuation">
+        <div class="section-intro">
+          <h2>Valuation Ensemble (Multi-Model Intrinsic Value)</h2>
+          <p>Combines 4 independent valuation frameworks (Graham Formula, Target P/E, Peter Lynch Fair Value, and Justified P/B) for a robust composite fair value.</p>
+        </div>
+
+        <div class="valuation-layout">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Parameters</div>
+              <button class="btn btn-secondary btn-sm" onclick="ReportExporter.exportValuationNote(document.getElementById('valStockSelect').value)">
+                Export Forensic Note
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="valStockSelect">Select Company</label>
+              <select id="valStockSelect" class="form-control"></select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+              <div class="form-group">
+                <label class="form-label" for="valCurrentPrice">Price (₹)</label>
+                <input type="number" id="valCurrentPrice" class="form-control" step="0.05">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="valEPS">TTM EPS (₹)</label>
+                <input type="number" id="valEPS" class="form-control" step="0.01">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+              <div class="form-group">
+                <label class="form-label" for="valGrowthRate">Expected Growth (g %)</label>
+                <input type="number" id="valGrowthRate" class="form-control" step="0.5" value="12">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="valTargetPE">Target Fair P/E</label>
+                <input type="number" id="valTargetPE" class="form-control" step="0.1" value="25">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+              <div class="form-group">
+                <label class="form-label" for="valBondYield">India 10Y Yield (%)</label>
+                <input type="number" id="valBondYield" class="form-control" step="0.01" value="6.82">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="valMarginReq">Margin of Safety Req (%)</label>
+                <input type="number" id="valMarginReq" class="form-control" step="1" value="20">
+              </div>
+            </div>
+          </div>
+
+          <div class="valuation-result-box">
+            <div class="valuation-metric-hero">
+              <div class="fair-value-title">Composite Blended Fair Value</div>
+              <div class="fair-value-display" id="valFairValueDisplay">₹ 0.00</div>
+              <div id="valVerdictBadge" class="verdict-badge badge-emerald">Analyzing</div>
+              <div id="valVerdictDesc" style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: 6px;"></div>
+            </div>
+
+            <div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">1. Modified Graham Model:</span>
+                <span class="breakdown-val" id="valGrahamValue">₹ 0.00</span>
+              </div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">2. Target P/E Multiple:</span>
+                <span class="breakdown-val" id="valPEValue">₹ 0.00</span>
+              </div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">3. Peter Lynch Fair Value:</span>
+                <span class="breakdown-val" id="valLynchValue">₹ 0.00</span>
+              </div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">4. Justified P/B (ROE Model):</span>
+                <span class="breakdown-val" id="valPBValue">₹ 0.00</span>
+              </div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">Margin of Safety:</span>
+                <span class="breakdown-val text-emerald" id="valMosPercent">0.00%</span>
+              </div>
+              <div class="valuation-breakdown-row">
+                <span class="breakdown-label">Max Recommended Buy Price:</span>
+                <span class="breakdown-val" id="valMaxBuyPrice">₹ 0.00</span>
+              </div>
+              <div class="valuation-breakdown-row" style="border-bottom: none; padding-top: 10px;">
+                <span class="breakdown-label" style="color: var(--accent-blue); font-weight: 600;">Reverse DCF Implied Growth:</span>
+                <span class="breakdown-val" id="valReverseDCF">+0.0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VIEW 4: FINANCIAL HEALTH, FORENSICS, DUPONT & ALTMAN Z-SCORE
+           ================================================================== -->
+      <section class="view-section" id="view-analysis">
+        <div class="section-intro">
+          <h2>Forensic Analysis & DuPont Decomposition</h2>
+          <p>Institutional 3-stage DuPont ROE breakdown, Altman Z-Score bankruptcy risk analysis, and 9-point Piotroski health scoring.</p>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
+            <div>
+              <div style="display: flex; align-items: center; gap: var(--space-xs);">
+                <h3 id="analysisStockName" style="font-size: var(--text-lg); font-weight: 700;">Reliance Industries Ltd.</h3>
+                <span id="analysisTickerBadge" class="badge badge-sector">RELIANCE</span>
+                <span id="analysisSectorBadge" class="badge badge-emerald">Energy</span>
+                <a id="analysisScreenerLink" href="#" target="_blank" rel="noopener" class="badge badge-amber">Screener.in ↗</a>
+              </div>
+              <p id="analysisOverview" style="font-size: var(--text-xs); color: var(--text-secondary); max-width: 800px; margin-top: 4px;"></p>
+            </div>
+            <div style="min-width: 220px;">
+              <select id="analysisStockSelect" class="form-control"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Stage DuPont ROE Decomposition -->
+        <div class="card" style="border-left: 3px solid var(--accent-blue);">
+          <div class="card-header">
+            <div>
+              <div class="card-title">3-Stage DuPont ROE Decomposition</div>
+              <div class="card-subtitle">Deconstructs Return on Equity into Operating Profitability, Asset Velocity, and Capital Leverage</div>
+            </div>
+            <span class="badge badge-sector">ROE = Margin × Turnover × Leverage</span>
+          </div>
+
+          <div class="forensic-metric-grid">
+            <div class="forensic-box">
+              <span class="kpi-label">1. Net Profit Margin</span>
+              <strong id="dupontMargin" style="font-size: var(--text-lg); font-family: var(--font-family-mono); color: var(--text-primary);">0%</strong>
+              <span style="font-size: 0.72rem; color: var(--text-tertiary);">Operating pricing power & retention</span>
+            </div>
+            <div class="forensic-box">
+              <span class="kpi-label">2. Asset Turnover Ratio</span>
+              <strong id="dupontTurnover" style="font-size: var(--text-lg); font-family: var(--font-family-mono); color: var(--text-primary);">0x</strong>
+              <span style="font-size: 0.72rem; color: var(--text-tertiary);">Revenue generated per ₹ of assets</span>
+            </div>
+            <div class="forensic-box">
+              <span class="kpi-label">3. Financial Leverage (Equity Multiplier)</span>
+              <strong id="dupontLeverage" style="font-size: var(--text-lg); font-family: var(--font-family-mono); color: var(--text-primary);">0x</strong>
+              <span style="font-size: 0.72rem; color: var(--text-tertiary);">Total Assets / Shareholders Equity</span>
+            </div>
+            <div class="forensic-box" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+              <span class="kpi-label">DuPont Implied ROE</span>
+              <strong id="dupontCalculatedROE" style="font-size: var(--text-lg); font-family: var(--font-family-mono); color: var(--accent-emerald);">0%</strong>
+              <span id="dupontDriver" style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">Driver: Operational Moat</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Altman Z-Score Solvency Analysis -->
+        <div class="card" style="border-left: 3px solid var(--accent-amber);">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Altman Z-Score (Financial Solvency & Distress Risk)</div>
+              <div class="card-subtitle">Multivariate statistical model predicting 2-year probability of balance sheet distress</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-xs);">
+              <span id="altmanScoreVal" style="font-size: var(--text-xl); font-family: var(--font-family-mono); font-weight: 700;">0.00</span>
+              <span id="altmanBadge" class="badge badge-emerald">Safe Zone</span>
+            </div>
+          </div>
+          <p id="altmanDesc" style="font-size: var(--text-xs); color: var(--text-secondary);"></p>
+        </div>
+
+        <!-- 52W Timing Bar -->
+        <div class="timing-meter-container">
+          <div style="display: flex; justify-content: space-between; font-size: var(--text-xs);">
+            <span style="color: var(--text-secondary); font-weight: 500;">52-Week Price Range Position:</span>
+            <span id="timingMeterBadge" class="badge badge-amber">Mid-Range</span>
+          </div>
+          <div class="timing-meter-bar">
+            <div id="timingMeterFill" class="timing-meter-fill" style="width: 50%;"></div>
+          </div>
+        </div>
+
+        <!-- Key Financial KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Market Price</div>
+            <div class="kpi-value" id="analysisPrice">₹ 0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Market Cap</div>
+            <div class="kpi-value" id="analysisMarketCap">₹ 0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">P/E Multiple</div>
+            <div class="kpi-value" id="analysisPE">0.0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">P/B Multiple</div>
+            <div class="kpi-value" id="analysisPB">0.0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">ROE</div>
+            <div class="kpi-value text-emerald" id="analysisROE">0%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">ROCE</div>
+            <div class="kpi-value text-emerald" id="analysisROCE">0%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label" id="analysisDebtEquityLabel">Debt-to-Equity</div>
+            <div class="kpi-value" id="analysisDebtEquity">0.00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">52W Range</div>
+            <div class="kpi-value" id="analysis52W" style="font-size: var(--text-base);">₹ 0 - 0</div>
+          </div>
+        </div>
+
+        <!-- Piotroski Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Piotroski 9-Point Score</div>
+              <div class="card-subtitle">Fundamental health checklist across profitability, leverage, and efficiency</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-xs);">
+              <span id="piotroskiScoreVal" style="font-size: var(--text-xl); font-family: var(--font-family-mono); font-weight: 700; color: var(--accent-emerald);">0 / 9</span>
+              <span id="piotroskiBadge" class="badge badge-emerald">Health Check</span>
+            </div>
+          </div>
+          <div id="piotroskiCriteriaList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px;"></div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Revenue & Net Profit (₹ Cr)</div></div>
+            <div class="chart-wrapper"><canvas id="analysisTrajectoryChart"></canvas></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Profit Margins (%)</div></div>
+            <div class="chart-wrapper"><canvas id="analysisMarginChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Historical Statement Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">4-Year Financial History</div>
+            <span class="badge badge-sector">Figures in ₹ Crores</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th class="num">FY21</th>
+                  <th class="num">FY22</th>
+                  <th class="num">FY23</th>
+                  <th class="num">FY24</th>
+                </tr>
+              </thead>
+              <tbody id="analysisStatementTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VIEW 5: PORTFOLIO & RISK ENGINE
+           ================================================================== -->
+      <section class="view-section" id="view-portfolio">
+        <div class="section-intro">
+          <h2>Portfolio & Risk Engine</h2>
+          <p>Track existing holdings and calculate position sizing before entering new orders.</p>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Portfolio Worth</div>
+            <div class="kpi-value text-emerald" id="portCurrentVal">₹ 0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Invested Capital</div>
+            <div class="kpi-value" id="portInvestedVal">₹ 0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Net Profit / Loss</div>
+            <div class="kpi-value" id="portNetPL">₹ 0 (0.00%)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Position Sizing & Risk Calculator</div>
+              <div class="card-subtitle">Compute exact share quantity based on capital risk tolerance</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-md);">
+            <div class="form-group">
+              <label class="form-label" for="riskStockSelect">Stock</label>
+              <select id="riskStockSelect" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="riskTotalCapital">Capital (₹)</label>
+              <input type="number" id="riskTotalCapital" class="form-control" value="500000" step="10000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="riskPercent">Max Risk (%)</label>
+              <input type="number" id="riskPercent" class="form-control" value="1.5" step="0.25">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="riskEntryPrice">Entry Price (₹)</label>
+              <input type="number" id="riskEntryPrice" class="form-control" step="0.05">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="riskStopLoss">Stop Loss (₹)</label>
+              <input type="number" id="riskStopLoss" class="form-control" step="0.05">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="riskTargetPrice">Target Price (₹)</label>
+              <input type="number" id="riskTargetPrice" class="form-control" step="0.05">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-xs); background: var(--bg-surface-elevated); padding: var(--space-md); border-radius: var(--radius-sm);">
+            <div>
+              <span class="kpi-label">Allocation:</span><br>
+              <strong id="riskSharesOut" style="font-size: var(--text-base); font-family: var(--font-family-mono); color: var(--accent-emerald);">0 Shares</strong>
+            </div>
+            <div>
+              <span class="kpi-label">Capital Req:</span><br>
+              <strong id="riskCapReqOut" style="font-size: var(--text-base); font-family: var(--font-family-mono);">₹ 0 (0%)</strong>
+            </div>
+            <div>
+              <span class="kpi-label">Max Risk:</span><br>
+              <strong id="riskMaxLossOut" style="font-size: var(--text-base); font-family: var(--font-family-mono); color: var(--accent-crimson);">₹ 0</strong>
+            </div>
+            <div>
+              <span class="kpi-label">Potential Gain:</span><br>
+              <strong id="riskPotGainOut" style="font-size: var(--text-base); font-family: var(--font-family-mono); color: var(--accent-emerald);">₹ 0</strong>
+            </div>
+            <div>
+              <span class="kpi-label">Risk/Reward:</span><br>
+              <strong id="riskRRROut" style="font-size: var(--text-base); font-family: var(--font-family-mono); color: var(--accent-blue);">1 : 0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Holdings</div>
+              <button class="btn btn-primary btn-sm" id="openAddHoldingBtn">+ Add Stock</button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Stock</th>
+                    <th class="num">Qty</th>
+                    <th class="num">Avg Price</th>
+                    <th class="num">Mkt Price</th>
+                    <th class="num">Invested</th>
+                    <th class="num">Value</th>
+                    <th class="num">P&L</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="portfolioTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Allocation</div></div>
+            <div class="chart-wrapper"><canvas id="portfolioAllocationChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VIEW 6: WATCHLIST & RADAR COMPARISON
+           ================================================================== -->
+      <section class="view-section" id="view-watchlist">
+        <div class="section-intro">
+          <h2>Watchlist & Radar Comparison</h2>
+          <p>Starred stocks and 5-factor radar comparison.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Starred Stocks</div></div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Sector</th>
+                  <th class="num">Price</th>
+                  <th class="num">P/E</th>
+                  <th class="num">P/B</th>
+                  <th class="num">ROE</th>
+                  <th class="num">ROCE</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="watchlistTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Peer Ratios</div></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+              <select id="peerSelect1" class="form-control"></select>
+              <select id="peerSelect2" class="form-control"></select>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Company 1</th>
+                    <th>Company 2</th>
+                  </tr>
+                </thead>
+                <tbody id="peerComparisonBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">5-Axis Radar Comparison</div></div>
+            <div class="chart-wrapper" style="height: 300px;"><canvas id="peerRadarChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Add Holding -->
+  <div class="modal-backdrop" id="addHoldingModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Record Acquisition</div>
+        <button class="modal-close" id="closeHoldingModalBtn">&times;</button>
+      </div>
+      <form id="addHoldingForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="modalStockSelect">Company</label>
+            <select id="modalStockSelect" class="form-control" required></select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+            <div class="form-group">
+              <label class="form-label" for="modalBuyPrice">Price (₹)</label>
+              <input type="number" id="modalBuyPrice" class="form-control" step="0.05" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modalShares">Shares</label>
+              <input type="number" id="modalShares" class="form-control" min="1" step="1" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modalBuyDate">Date</label>
+            <input type="date" id="modalBuyDate" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelHoldingModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Holding</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/valuation.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
